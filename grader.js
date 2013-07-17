@@ -90,12 +90,15 @@ if(require.main == module) {
 		sys.puts('Error: ' + result.message);
 		this.retry(5000); // try again after 5 sec
 	    } else {
-		fs.writeFile(urlFileName, result);
+		fs.writeFileSync(urlFileName, result);
+		var checkJson = checkHtmlFile(urlFileName, program.checks);
+		var outJson = JSON.stringify(checkJson, null, 4);
+		console.log(outJson);
 	    }
 	});
-	var checkJson = checkHtmlFile(urlFileName, program.checks);
-	var outJson = JSON.stringify(checkJson, null, 4);
-	console.log(outJson);
+	//var checkJson = checkHtmlFile(urlFileName, program.checks);
+	//var outJson = JSON.stringify(checkJson, null, 4);
+	//console.log(outJson);
     } else {
 	var checkJson = checkHtmlFile(program.file, program.checks);
 	var outJson = JSON.stringify(checkJson, null, 4);
