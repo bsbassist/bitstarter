@@ -17,9 +17,25 @@ Review, learn from, and auto-categorize uncategorized and unapproved YNAB transa
 
 Make a todo list for all the tasks in this workflow and work on them one after another.
 
-### 1. Verify Auth and Token
+### 1. Verify Connectivity, Then Auth
 
-Check that the token is present and the API responds successfully:
+**Phase 1 — Connectivity pre-check** (before spending time on anything else):
+
+```bash
+if ! curl -sf --max-time 5 -o /dev/null "https://api.ynab.com/v1/user"; then
+  # Distinguish: no route vs. auth error
+  HTTP=$(curl -s --max-time 5 -o /dev/null -w "%{http_code}" "https://api.ynab.com/v1/user" 2>/dev/null)
+  if [ -z "$HTTP" ] || [ "$HTTP" = "000" ]; then
+    echo "ERROR: Cannot reach api.ynab.com."
+    echo "Check your internet connection or VPN, then try again."
+    exit 1
+  fi
+fi
+```
+
+If the host is unreachable (exit code non-zero and HTTP code is empty or `000`), stop immediately with a clear network error. Do not proceed — there is no point checking the token if the API cannot be reached.
+
+**Phase 2 — Token presence and validity:**
 
 ```bash
 if [ -z "${YNAB_API_TOKEN:-}" ]; then
@@ -29,12 +45,16 @@ if [ -z "${YNAB_API_TOKEN:-}" ]; then
   exit 1
 fi
 
-curl -sf -o /dev/null -w "%{http_code}" \
+HTTP=$(curl -sf -o /dev/null -w "%{http_code}" \
   -H "Authorization: Bearer $YNAB_API_TOKEN" \
-  "https://api.ynab.com/v1/user"
+  "https://api.ynab.com/v1/user")
+echo "API status: $HTTP"
 ```
 
-If the HTTP status is not `200`, tell the user their token is invalid or expired and stop. Provide the link to regenerate: https://app.ynab.com/settings/developer
+Response handling:
+- `200` → proceed
+- `401` → token is invalid or expired; stop and link to https://app.ynab.com/settings/developer
+- Any other non-200 → show the status code and stop
 
 ### 2. Select Budget
 
